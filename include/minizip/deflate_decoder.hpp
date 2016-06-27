@@ -10,7 +10,7 @@
 
 namespace minizip {
 
-  class decoder {
+  class deflate_decoder {
     enum { debug = 0 };
 
     struct huffman_table {
@@ -320,7 +320,7 @@ namespace minizip {
       return decode_lz77(dest, dest_max, src, src_max, bitptr, &var);
     }
   public:
-    decoder() {
+    deflate_decoder() {
       uint8_t lit_lengths[288];
       uint8_t dist_lengths[32];
       memset(lit_lengths +   0, 8, 144 - 0);

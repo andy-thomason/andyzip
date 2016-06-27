@@ -79,7 +79,7 @@ unsigned char if_zip[] = {
   0x00, 0x00, 0x00, 0x00
 };
 
-#include <minizip/decoder.hpp>
+#include <minizip/deflate_decoder.hpp>
 #include <minizip/zipfile_reader.hpp>
 
 int main() {
