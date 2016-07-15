@@ -8,6 +8,9 @@
 #ifndef MINIZIP_DECODER_INCLUDED
 #define MINIZIP_DECODER_INCLUDED
 
+#include <cstdint>
+#include <cstring>
+
 namespace minizip {
 
   class deflate_decoder {
