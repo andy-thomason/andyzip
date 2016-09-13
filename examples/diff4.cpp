@@ -23,14 +23,30 @@ int main(int argc, const char **argv) {
 
   std::ifstream istr(in_file, std::ios::binary);
   std::ofstream ostr(out_file, std::ios::binary);
-  int prev[4] = { 0 };
+
+  std::vector<char> in_data;
+  while (istr) {
+    in_data.push_back(istr.get());
+  }
+
+  char *end = in_data.data() + in_data.size();
+  for (size_t i = 0; i != 4; ++i) {
+    int prev = 0;
+    for (char *p = in_data.data() + i; p < end; p += 4) {
+      ostr.put(*p - prev);
+      prev = *p;
+    }
+  }
+
+
+  /*int prev[4] = { 0 };
   int i = 0;
   while (istr) {
     int chr = istr.get();
     ostr.put(chr - prev[i & 3]);
     prev[i & 3] = chr;
     ++i;
-  }
+  }*/
 }
 
 
