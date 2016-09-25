@@ -9,7 +9,7 @@
 #include <vector>
 #include <stdexcept>
 #include <cstring>
-#include <minizip/decoder.hpp>
+#include <minizip/deflate_decoder.hpp>
 
 // Simple zipfile reader. Allows extraction of files in a mapped zipfile.
 class zipfile_reader {
@@ -207,5 +207,5 @@ private:
   const uint8_t *end_;
   const uint8_t *central_dir_begin_;
   const uint8_t *central_dir_end_;
-  minizip::decoder dec_;
+  minizip::deflate_decoder dec_;
 };
