@@ -19,7 +19,6 @@ namespace minizip {
       addr_type group;
       addr_type next_group;
       addr_type addr;
-      addr_type depth;
     };
 
     void assign(const uint8_t *src, const uint8_t *src_max) {
@@ -31,7 +30,6 @@ namespace minizip {
         s.group = i == size ? 0 : src[i];
         s.next_group = i == size ? 0 : 1;
         s.addr = (addr_type)i;
-        s.depth = 0;
       }
 
       auto sort_by_address = [](const sorter_t &a, const sorter_t &b) { return a.addr < b.addr; };
@@ -55,7 +53,7 @@ namespace minizip {
             auto q = src + sorter[i-1].addr;
             while (*p && *p == *q) { ++p; ++q; ++acp; }
           }
-          printf("%4d %12d %4d %4d %4d %4d %s\n", (int)i, (int)s.group, (int)s.next_group, (int)s.addr, (int)s.depth, (int)acp, (char*)src + s.addr);
+          printf("%4d %12d %4d %4d %4d %s\n", (int)i, (int)s.group, (int)s.next_group, (int)s.addr, (int)acp, (char*)src + s.addr);
         }
       };
 
@@ -72,10 +70,8 @@ namespace minizip {
           int done = 0;
           for (; j != size+1 && sorter[j].group == si.group && sorter[j].next_group == si.next_group; ++j) {
             sorter[j].group = (addr_type)i;
-            sorter[j].depth++;
             done = 1;
           }
-          sorter[i].depth += done;
           finished &= !done;
           i = j;
         }
@@ -94,6 +90,30 @@ namespace minizip {
         }
     
         //if (debug) debug_dump("set next_group", h);
+      }
+
+
+      // Kasai, T.; Lee, G.; Arimura, H.; Arikawa, S.; Park, K. (2001). Linear-Time Longest-Common-Prefix Computation in Suffix Arrays and Its Applications.
+      // Proceedings of the 12th Annual Symposium on Combinatorial Pattern Matching. Lecture Notes in Computer Science. 2089. pp. 181–192. doi:10.1007/3-540-48194-X_17. ISBN 978-3-540-42271-6.
+      auto pos = [this](size_t i) -> addr_type & { return sorter[i].addr; };
+      auto rank = [this](size_t i) -> addr_type & { return sorter[i].group; };
+      auto height = [this](size_t i) -> addr_type & { return sorter[i].next_group; };
+
+      for (size_t i = 0; i != sorter.size(); ++i) {
+        rank(pos(i)) = (addr_type)i;
+      }
+
+      addr_type h = 0;
+      for (size_t i = 0; i != sorter.size(); ++i) {
+        addr_type r = rank(i);
+        if (r > 0) {
+          addr_type j = sorter[r-1].addr;
+          while (src[i+h] == src[j+h]) {
+            ++h;
+          }
+          height(r) = h;
+          h -= h > 0;
+        }
       }
 
       //std::sort(sorter.begin(), sorter.end(), sort_by_address);
