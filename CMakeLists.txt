@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 
-project(minizip)
+project(andyzip)
 
 IF(WIN32)
 ELSE(WIN32)

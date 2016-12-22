@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-namespace minizip {
+namespace andyzip {
   class suffix_array {
   public:
     typedef uint32_t addr_type;

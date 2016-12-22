@@ -14,7 +14,7 @@
 #include <cmath>
 #include <vector>
 
-namespace minizip {
+namespace andyzip {
   // Get a measure of how correlated the data is at various stride levels.
   void abs_correlation(std::vector<int> &result, const uint8_t *begin, const uint8_t *end, const std::initializer_list<int> &values) {
     result.clear();

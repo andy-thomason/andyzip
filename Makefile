@@ -17,14 +17,14 @@ endif
 
 # add your binary here
 BINARIES = \
-	bin/minizip$(EXE)
+	bin/andyzip$(EXE)
 
 all: $(BINARIES)
 
 clean:
 	rm -f $(BINARIES)
 
-bin/minizip$(EXE): examples/minizip.cpp include/minizip/decoder.hpp 
+bin/andyzip$(EXE): examples/andyzip.cpp include/andyzip/decoder.hpp 
 	$(CC) $(CCFLAGS) $< -o $@
 
 

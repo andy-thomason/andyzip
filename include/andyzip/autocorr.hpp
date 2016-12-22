@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace minizip {
+namespace andyzip {
   template<class T>
   class range {
   public:

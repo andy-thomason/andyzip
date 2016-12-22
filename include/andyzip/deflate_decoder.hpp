@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace minizip {
+namespace andyzip {
 
   class deflate_decoder {
     enum { debug = 0 };

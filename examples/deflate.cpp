@@ -5,10 +5,10 @@
 #include <iostream>
 
 
-#include <minizip/deflate_encoder.hpp>
+#include <andyzip/deflate_encoder.hpp>
 
 int main() {
-  minizip::deflate_encoder enc;
+  andyzip::deflate_encoder enc;
 
   //static const uint8_t text[] = "to be or not to be, that is the question! 1234 1234 1234";
   static const uint8_t text[] = "123123123";

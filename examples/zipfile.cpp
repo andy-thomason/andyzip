@@ -79,8 +79,8 @@ unsigned char if_zip[] = {
   0x00, 0x00, 0x00, 0x00
 };
 
-#include <minizip/deflate_decoder.hpp>
-#include <minizip/zipfile_reader.hpp>
+#include <andyzip/deflate_decoder.hpp>
+#include <andyzip/zipfile_reader.hpp>
 
 int main() {
   zipfile_reader reader(if_zip, if_zip + sizeof(if_zip));
