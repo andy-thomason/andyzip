@@ -5,8 +5,8 @@
 // 
 
 
-#ifndef MINIZIP_DECODER_INCLUDED
-#define MINIZIP_DECODER_INCLUDED
+#ifndef ANDYZIP_DEFLATE_DECODER_HPP_
+#define ANDYZIP_DEFLATE_DECODER_HPP_
 
 #include <cstdint>
 #include <cstring>
@@ -363,6 +363,6 @@ namespace andyzip {
     }
   };
 
-} // vku
+}
 
 #endif
