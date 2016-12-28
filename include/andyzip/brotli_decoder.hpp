@@ -981,7 +981,7 @@ namespace andyzip {
           int prev_code_len = 8;
           int repeat = 0;
           int repeat_code_len = 0;
-          for(int i = 0; i < alphabet_size;) {
+          for(int i = 0; i < alphabet_size && space < 32768;) {
             auto code = complex_table.decode(s.peek(16));
             s.drop(code.first, "CPLX");
             int code_len = code.second;
@@ -989,31 +989,49 @@ namespace andyzip {
               if (code.second) {
                 fprintf(s.log_file, "[ReadHuffmanCode] code_length[%d] = %d\n", i, code.second);
               }
-              lengths[i++] = nzcl = (uint8_t)code.second;
+              lengths[i++] = (uint8_t)code.second;
+              if (code.second) {
+                space += 32768 >> code.second;
+                prev_code_len = code.second;
+              }
               repeat = 0;
             } else {
               int extra_bits = code_len == 16 ? 2 : 3;
               int new_len = code_len == 16 ? prev_code_len : 0;
               int repeat_delta = s.peek(extra_bits);
               s.drop(extra_bits, "EXTRA");
+
               if (repeat_code_len != new_len) {
                 repeat = 0;
                 repeat_code_len = new_len;
               }
+
               int old_repeat = repeat;
               if (repeat > 0) {
                 repeat -= 2;
                 repeat <<= extra_bits;
               }
+
               repeat += repeat_delta + 3U;
               repeat_delta = repeat - old_repeat;
 
               fprintf(s.log_file, "[ReadHuffmanCode] code_length[%d..%d] = %d\n", i, i + repeat_delta - 1, new_len);
+              if (i + repeat_delta > alphabet_size) {
+                s.error = error_code::huffman_length_error;
+                return;
+              }
               for (int j = 0; j != repeat_delta; ++j) {
                 lengths[i++] = new_len;
               }
+              if (new_len) {
+                space += (32768 >> new_len) * repeat_delta;
+              }
             }
             prev_code_len = code.second;
+            if (space > 32768) {
+              s.error = error_code::huffman_length_error;
+              return;
+            }
           }
         }
       }
@@ -1186,12 +1204,14 @@ namespace andyzip {
           if (s.error != error_code::ok) return s.error;
 
           // read array of literal prefix codes, HTREEL[]
+          fprintf(s.log_file, "HTREEL[]\n");
           std::vector<andyzip::huffman_table<256, debug>> literal_tables(num_literal_htrees);
           for (int i = 0; i != literal_tables.size(); ++i) {
             read_huffman_code(s, literal_tables[i], 256);
           }
 
           // read array of insert-and-copy length prefix codes, HTREEI[]
+          fprintf(s.log_file, "HTREEI[]\n");
           std::vector<andyzip::huffman_table<704, debug>> iandc_tables(1);
           for (int i = 0; i != iandc_tables.size(); ++i) {
             read_huffman_code(s, iandc_tables[i], 704);
@@ -1201,6 +1221,7 @@ namespace andyzip {
           static const int max_distance_alphabet_size = num_distance_short_codes + (15 << 3) + (48 << 3);
           std::vector<andyzip::huffman_table<256, debug>> distance_tables(num_distance_htrees);
           int distance_alphabet_size = num_direct_distance_codes + (48 << distance_postfix_bits);
+          fprintf(s.log_file, "HTREED[]\n");
           for (int i = 0; i != iandc_tables.size(); ++i) {
             read_huffman_code(s, distance_tables[i], num_distance_htrees);
           }
