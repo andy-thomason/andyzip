@@ -33,6 +33,25 @@ namespace andyzip {
     {8433, 13}, {16625, 24}
   };
 
+  static const uint8_t distance_table[16] = {
+     0x14, // 0: last distance
+     0x24, // 1: second-to-last distance
+     0x34, // 2: third-to-last distance
+     0x44, // 3: fourth-to-last distance
+     0x14 - 1, // 4: last distance - 1
+     0x14 + 1, // 5: last distance + 1
+     0x14 - 2, // 6: last distance - 2
+     0x14 + 2, // 7: last distance + 2
+     0x14 - 3, // 8: last distance - 3
+     0x14 + 3, // 9: last distance + 3
+     0x24 - 1, //10: second-to-last distance - 1
+     0x24 + 1, //11: second-to-last distance + 1
+     0x24 - 2, //12: second-to-last distance - 2
+     0x24 + 2, //13: second-to-last distance + 2
+     0x24 - 3, //14: second-to-last distance - 3
+     0x24 + 3, //15: second-to-last distance + 3
+  };
+
   typedef struct CmdLutElement {
     uint8_t insert_len_extra_bits;
     uint8_t copy_len_extra_bits;
@@ -749,6 +768,63 @@ namespace andyzip {
     { 0x18, 0x18, -1, 0x03, 0x5842, 0x0846 },
   };
 
+  static const uint8_t Lut0[] = {
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  4,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    8, 12, 16, 12, 12, 20, 12, 16, 24, 28, 12, 12, 32, 12, 36, 12,
+    44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 32, 32, 24, 40, 28, 12,
+    12, 48, 52, 52, 52, 48, 52, 52, 52, 48, 52, 52, 52, 52, 52, 48,
+    52, 52, 52, 52, 52, 48, 52, 52, 52, 52, 52, 24, 12, 28, 12, 12,
+    12, 56, 60, 60, 60, 56, 60, 60, 60, 56, 60, 60, 60, 60, 60, 56,
+    60, 60, 60, 60, 60, 56, 60, 60, 60, 60, 60, 24, 12, 28, 12,  0,
+    0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+    0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+    0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+    0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+    2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3,
+    2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3,
+    2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3,
+    2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3
+  };
+
+  static const uint8_t Lut1[] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1,
+    1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+  };
+
+  static const uint8_t Lut2[] = {
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7
+  };
+
   struct brotli_decoder_state {
     enum class error_code {
       ok = 0,
@@ -775,6 +851,7 @@ namespace andyzip {
     uint8_t context_mode[max_types];
     uint8_t literal_context_map[256]; // todo: what is the max size?
     uint8_t distance_context_map[256];
+    std::vector<uint8_t> ring_buffer;
 
     /// debug function for dumping bit fields
     void dump_bits(unsigned value, unsigned bits, const char *name) {
@@ -1095,6 +1172,9 @@ namespace andyzip {
       fprintf(s.log_file, "[BrotliDecoderDecompressStream] s->window_bits = %d\n", lg_window_size);
       fprintf(s.log_file, "[BrotliDecoderDecompressStream] s->pos = %d\n", 0);
 
+      s.ring_buffer.resize(1 << lg_window_size);
+      int ringbuffer_mask = (1 << lg_window_size) - 1;
+
       //  do
       {
           // read ISLAST bit
@@ -1189,11 +1269,11 @@ namespace andyzip {
           // read NPOSTFIX and NDIRECT
           int pbits = s.read(6, "NPOSTFIX");
           if (s.error != error_code::ok) return s.error;
-          int num_direct_distance_codes = num_distance_short_codes + ((pbits >> 2) << (pbits & 3));
-          int distance_postfix_bits = pbits & 3;
+          int NDIRECT = num_distance_short_codes + ((pbits >> 2) << (pbits & 3));
+          int NPOSTFIX = pbits & 3;
           if (s.error != error_code::ok) return s.error;
-          fprintf(s.log_file, "[BrotliDecoderDecompressStream] s->num_direct_distance_codes = %d\n", num_direct_distance_codes);
-          fprintf(s.log_file, "[BrotliDecoderDecompressStream] s->distance_postfix_bits = %d\n", distance_postfix_bits);
+          fprintf(s.log_file, "[BrotliDecoderDecompressStream] s->num_direct_distance_codes = %d\n", NDIRECT);
+          fprintf(s.log_file, "[BrotliDecoderDecompressStream] s->distance_postfix_bits = %d\n", NPOSTFIX);
 
           // read array of literal context modes, CMODE[]
           for (int i = 0; i != s.num_types[0]; ++i) {
@@ -1232,26 +1312,32 @@ namespace andyzip {
           // read array of distance prefix codes, HTREED[]
           static const int max_distance_alphabet_size = num_distance_short_codes + (15 << 3) + (48 << 3);
           std::vector<andyzip::huffman_table<256>> distance_tables(num_distance_htrees);
-          int distance_alphabet_size = num_direct_distance_codes + (48 << distance_postfix_bits);
+          int distance_alphabet_size = NDIRECT + (48 << NPOSTFIX);
           for (int i = 0; i != distance_tables.size(); ++i) {
             fprintf(s.log_file, "distance tbl %d\n", i);
             read_huffman_code(s, distance_tables[i], distance_alphabet_size);
           }
 
           // do
+          uint8_t p1 = 0, p2 = 0;
+          int last_distances[4] = { 16, 15, 11, 4 };
+          int last_distance_idx = 0;
+
+          for (int pos = 0; pos < mlen; ) {
             fprintf(s.log_file, "new block\n");
             //  if BLEN_I is zero
-                // read block type using HTREE_BTYPE_I and set BTYPE_I
-                  //  save previous block type
-                // read block count using HTREE_BLEN_I and set BLEN_I
+            if (s.block_len[idx_I] == 0) {
+              // read block type using HTREE_BTYPE_I and set BTYPE_I
+                //  save previous block type
+              // read block count using HTREE_BLEN_I and set BLEN_I
+            }
             //  decrement BLEN_I
+            s.block_len[idx_I]--;
 
             //  read insert-and-copy length symbol using HTREEI[BTYPE_I]
             int peek16 = s.peek(16);
-            fprintf(s.log_file, "%04x\n", peek16);
             auto iandc = iandc_tables[s.block_type[idx_I]].decode(peek16);
             s.drop(iandc.first, "CMD");
-            fprintf(s.log_file, "%d %d\n", iandc.first, iandc.second);
 
             //  compute insert length, ILEN, and copy length, CLEN
             CmdLutElement cmd = kCmdLut[iandc.second];
@@ -1263,41 +1349,120 @@ namespace andyzip {
               cmd.copy_len_offset + 
               (cmd.copy_len_extra_bits ? s.read(cmd.copy_len_extra_bits, "CEXTRA") : 0)
             ;
+            fprintf(s.log_file, "[ProcessCommandsInternal] pos = %d insert = %d copy = %d\n", pos, insert_len, copy_len);
+
             //  loop for ILEN
-                // if BLEN_L is zero
-                  //  read block type using HTREE_BTYPE_L and set BTYPE_L
-                    //   save previous block type
-                  //  read block count using HTREE_BLEN_L and set BLEN_L
-                // decrement BLEN_L
-                // look up context mode CMODE[BTYPE_L]
-                // compute context ID, CIDL from last two uncompressed bytes
-                // read literal using HTREEL[CMAPL[64*BTYPE_L + CIDL]]
-                // write literal to uncompressed stream
-            //  if number of uncompressed bytes produced in the loop for
-                // this meta-block is MLEN, then break from loop (in this
-                // case the copy length is ignored and can have any value)
+            for (int i = 0; i != insert_len && pos < mlen; ++i) {
+              // if BLEN_L is zero
+              if (s.block_len[idx_L] == 0) {
+                //  read block type using HTREE_BTYPE_L and set BTYPE_L
+                  //   save previous block type
+                //  read block count using HTREE_BLEN_L and set BLEN_L
+              }
+              // decrement BLEN_L
+              s.block_len[idx_L]--;
+
+              // look up context mode CMODE[BTYPE_L]
+              uint8_t cmode = s.context_mode[s.block_type[idx_L]];
+
+              // compute context ID, CIDL from last two uncompressed bytes
+              // 7.1.  Context Modes and Context ID Lookup for Literals
+              // For LSB6:    Context ID = p1 & 0x3f
+              // For MSB6:    Context ID = p1 >> 2
+              // For UTF8:    Context ID = Lut0[p1] | Lut1[p2]
+              // For Signed:  Context ID = (Lut2[p1] << 3) | Lut2[p2]
+              int context_id =
+                cmode < 2 ? (p1 >> cmode*2) & 63 :
+                cmode == 2 ? Lut0[p1] | Lut1[p2] : (Lut2[p1] << 3) | Lut2[p2]
+              ;
+
+              // read literal using HTREEL[CMAPL[64*BTYPE_L + CIDL]]
+              int peek16 = s.peek(16);
+              int table = s.literal_context_map[64 * s.block_type[idx_L] + context_id];
+              auto lit = literal_tables[table].decode(peek16);
+              s.drop(lit.first, "LIT");
+
+              // write literal to uncompressed stream
+              p2 = p1;
+              p1 = (uint8_t)lit.second;
+              fprintf(s.log_file, "[ProcessCommandsInternal] s->ringbuffer[%d] = %d\n", pos, p1);
+              s.ringbuffer[pos & ringbuffer_mask] = p1;
+              pos++;
+            }
+
+            // if number of uncompressed bytes produced in the loop for
+            if (pos >= mlen) {
+              // this meta-block is MLEN, then break from loop (in this
+              // case the copy length is ignored and can have any value)
+              break;
+            }
+
+            // 4.  Encoding of Distances
+
             // if distance code is implicit zero from insert-and-copy code
-                // set backward distance to the last distance
-            //  else
-                // if BLEN_D is zero
-                  //  read block type using HTREE_BTYPE_D and set BTYPE_D
-                    //   save previous block type
-                  //  read block count using HTREE_BLEN_D and set BLEN_D
-                // decrement BLEN_D
-                // compute context ID, CIDD from CLEN
-                // read distance code using HTREED[CMAPD[4*BTYPE_D + CIDD]]
+            int distance = 0;
+            if (cmd.distance_code == 0) {
+              // set backward distance to the last distance
+              distance = last_distances[(last_distance_idx-1) & 3];
+            } else {
+              // if BLEN_D is zero
+              if (s.block_len[idx_D] == 0) {
+                //  read block type using HTREE_BTYPE_D and set BTYPE_D
+                  //   save previous block type
+                //  read block count using HTREE_BLEN_D and set BLEN_D
+              }
+              // decrement BLEN_D
+              s.block_len[idx_D]--;
+
+              // compute context ID, CIDD from CLEN
+              // read distance code using HTREED[CMAPD[4*BTYPE_D + CIDD]]
+              int peek16 = s.peek(16);
+              int table = s.distance_context_map[4 * s.block_type[idx_D] + cmd.context];
+              auto dist = distance_tables[table].decode(peek16);
+              int dcode = dist.second;
+              s.drop(dist.first, "DIST");
+
+              if (dcode < 16) {
                 // compute distance by distance short code substitution
-                // if distance code is not zero,
-                  //  and distance is not a static dictionary reference,
-                  //  push distance to the ring buffer of last distances
+                uint8_t subst = distance_table[dcode];
+                int base = last_distances[(last_distance_idx - (subst >> 4)) & 3];
+                distance = base + (subst & 0x0f) - 4;
+              } else if (dcode < NDIRECT + 16) {
+                distance = dcode - 15;
+              } else {
+                int ndistbits = 1 + ((dcode - NDIRECT - 16) >> (NPOSTFIX + 1));
+                int dextra = s.read(ndistbits, "dextra");
+                int POSTFIX_MASK = (1 << NPOSTFIX) - 1;
+                int hcode = (dcode - NDIRECT - 16) >> NPOSTFIX;
+                int lcode = (dcode - NDIRECT - 16) & POSTFIX_MASK;
+                int offset = ((2 + (hcode & 1)) << ndistbits) - 4;
+                distance = ((offset + dextra) << NPOSTFIX) + lcode + NDIRECT + 1;
+              }
+
+              // if distance code is not zero,
+              if (dcode != 0) {
+                //  and distance is not a static dictionary reference,
+                //  push distance to the ring buffer of last distances
+                last_distances[last_distance_idx++ & 3] = distance;
+              }
+            }
+            fprintf(s.log_file, "[ProcessCommandsInternal] s->meta_block_remaining_len = %d\n", mlen - pos);
+            fprintf(s.log_file, "[ProcessCommandsInternal] pos = %d distance = %d\n", pos, distance);
+  
             //  if distance is less than the max allowed distance plus one
+            /*{
+              for (int i = 0; i != copy_len; ++i) {
+                s.ringbuffer[pos & ringbuffer_mask] = s.ringbuffer[(pos-copy_len) & ringbuffer_mask];
+                ++pos;
+              }
                 // move backwards distance bytes in the uncompressed data,
                 // and copy CLEN bytes from this position to
                 // the uncompressed stream
             //  else
                 // look up the static dictionary word, transform the word as
                 // directed, and copy the result to the uncompressed stream
-          // while number of uncompressed bytes for this meta-block < MLEN
+            }*/
+          } // while number of uncompressed bytes for this meta-block < MLEN
       } //  while not ISLAST
 
       return s.error;

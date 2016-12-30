@@ -30,6 +30,9 @@ namespace andyzip {
         #define R6(n) R4(n), R4(n + 2*4 ), R4(n + 1*4 ), R4(n + 3*4 )
         R6(0), R6(2), R6(1), R6(3)
       };
+      #undef R2
+      #undef R4
+      #undef R6
       return BitReverseTable256[value&0xff] << 8 | BitReverseTable256[(value>>8)&0xff];
     }
   public:
