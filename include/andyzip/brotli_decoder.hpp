@@ -832,10 +832,11 @@ namespace andyzip {
       syntax_error = 2,
       end = 3,
       huffman_length_error = 4,
+      context_map_error = 5,
     };
 
     static const int max_types = 256;
-    static const bool dump_bits = false;
+    static const bool dump_bits = true;
     static const bool dump_reference = true;
     FILE *log_file = nullptr;
     const char *src = nullptr;
@@ -846,12 +847,16 @@ namespace andyzip {
     error_code error;
     int max_back_ref = 0;
     int num_types[3];
+    int penultimate_block_type[3];
+    int last_block_type[3];
     int block_type[3];
     int block_len[3];
     uint8_t context_mode[max_types];
     uint8_t literal_context_map[256]; // todo: what is the max size?
     uint8_t distance_context_map[256];
     std::vector<uint8_t> ring_buffer;
+    andyzip::huffman_table<256+2> block_type_tables[3];
+    andyzip::huffman_table<26> block_count_tables[3];
 
     int read(int bits) {
       int value = peek(bits);
@@ -879,6 +884,7 @@ namespace andyzip {
     static const int window_gap = 16;
     static const int literal_context_bits = 6;
     static const int distance_context_bits = 2;
+    static const int block_len_symbols = 26;
 
     static const int num_distance_short_codes = 16;
     typedef brotli_decoder_state::error_code error_code;
@@ -926,7 +932,7 @@ namespace andyzip {
     }
 
     // read a value from 1 to 256
-    static int read_256(brotli_decoder_state &s) {
+    int read_256(brotli_decoder_state &s) {
       int nlt0 = s.read(1);
       if (s.error != error_code::ok) return 0; 
 
@@ -940,7 +946,8 @@ namespace andyzip {
       int nlt5x = s.read(nlt14);
       if (s.error != error_code::ok) return 0; 
 
-      return (1 << nlt14) + nlt5x;
+      fprintf(s.log_file, "<%d %d %d> %d\n", nlt0, nlt14, nlt5x, (1 << nlt14) + nlt5x + 1);
+      return (1 << nlt14) + nlt5x + 1;
     }
 
     // From reference inplementation.
@@ -975,6 +982,7 @@ namespace andyzip {
       int code_type = s.read(2);
       if (s.error != error_code::ok) return;
       alphabet_size &= 1023;
+      fprintf(s.log_file, "alphabet_size=%d\n", alphabet_size);
       fprintf(s.log_file, "[ReadHuffmanCode] s->sub_loop_counter = %d\n", code_type);
       if (code_type == 1) {
         // 3.4.  Simple Prefix Codes
@@ -1030,11 +1038,17 @@ namespace andyzip {
             }
           }
           if (num_codes != 1 && space != 32) {
+            fprintf(s.log_file, "bad\n");
             s.error = error_code::huffman_length_error;
             return;
           }
 
           complex_table.init(lengths, nullptr, 18);
+          if (complex_table.invalid()) {
+            fprintf(s.log_file, "bad2\n");
+            s.error = error_code::huffman_length_error;
+            return;
+          }
         }
 
         {
@@ -1050,17 +1064,18 @@ namespace andyzip {
             s.drop(code.first);
             int code_len = code.second;
             if (code_len < 16) {
-              if (code.second) {
-                fprintf(s.log_file, "[ReadHuffmanCode] code_length[%d] = %d\n", i, code.second);
+              if (code_len) {
+                fprintf(s.log_file, "[ReadHuffmanCode] code_length[%d] = %d\n", i, code_len);
               }
               if (i + 1 > alphabet_size) {
                 s.error = error_code::huffman_length_error;
+            fprintf(s.log_file, "bad3\n");
                 return;
               }
-              lengths[i++] = (uint8_t)code.second;
-              if (code.second) {
-                space += 32768 >> code.second;
-                prev_code_len = code.second;
+              lengths[i++] = (uint8_t)code_len;
+              if (code_len) {
+                space += 32768 >> code_len;
+                prev_code_len = code_len;
               }
               repeat = 0;
             } else {
@@ -1085,6 +1100,7 @@ namespace andyzip {
 
               fprintf(s.log_file, "[ReadHuffmanCode] code_length[%d..%d] = %d\n", i, i + repeat_delta - 1, new_len);
               if (i + repeat_delta > alphabet_size) {
+                fprintf(s.log_file, "bad4 %d %d %d\n", i, repeat_delta, alphabet_size);
                 s.error = error_code::huffman_length_error;
                 return;
               }
@@ -1095,16 +1111,30 @@ namespace andyzip {
                 space += (32768 >> new_len) * repeat_delta;
               }
             }
-            prev_code_len = code.second;
           }
           if (space > 32768) {
+            fprintf(s.log_file, "bad5\n");
             s.error = error_code::huffman_length_error;
             return;
           }
           memset(lengths + i, 0, alphabet_size - i);
           table.init(lengths, nullptr, alphabet_size);
+          if (table.invalid()) {
+            fprintf(s.log_file, "bad6\n");
+            s.error = error_code::huffman_length_error;
+            return;
+          }
         }
       }
+    }
+
+    static int read_block_length(brotli_decoder_state &s, int index) {
+      unsigned code = s.peek(16);
+      auto length_code = s.block_count_tables[index].decode(code);
+      s.drop(length_code.first);
+      int extra_bits = kBlockLengthPrefixCode[length_code.second].nbits;
+      int value = s.read(extra_bits);
+      return kBlockLengthPrefixCode[length_code.second].offset + value;
     }
 
     static void read_context_map(brotli_decoder_state &s, uint8_t *context_map, int context_map_size, int num_trees) {
@@ -1121,12 +1151,28 @@ namespace andyzip {
         fprintf(s.log_file, "[DecodeContextMap] s->max_run_length_prefix = %d\n", rlemax);
         andyzip::huffman_table<256> table;
         read_huffman_code(s, table, num_trees + rlemax);
-        for (int i = 0; i != context_map_size; ++i) {
-          unsigned code = s.peek(16);
-          auto length_value = table.decode(code);
+        if (s.error != error_code::ok) return;
+        for (int i = 0; i != context_map_size;) {
+          unsigned bits = s.peek(16);
+          auto length_value = table.decode(bits);
           s.drop(length_value.first);
-          fprintf(s.log_file, "[DecodeContextMap] code = %d\n", length_value.second);
-          context_map[i] = (uint8_t)length_value.second;
+          int code = length_value.second;
+          fprintf(s.log_file, "[DecodeContextMap] code = %d\n", code);
+          if (code == 0) {
+            context_map[i++] = (uint8_t)code;
+          } else if (code > rlemax) {
+            context_map[i++] = (uint8_t)code - rlemax;
+          } else {
+            int repeat = s.read(code) + (1 << code);
+            fprintf(s.log_file, "[DecodeContextMap] reps = %d\n", repeat);
+            if (i + repeat > context_map_size) {
+              s.error = error_code::context_map_error;
+              return;
+            }
+            for (int j = 0; j != repeat; ++j) {
+              context_map[i++] = 0;
+            }
+          }
         }
 
         int imtf = s.read(1);
@@ -1235,14 +1281,19 @@ namespace andyzip {
             //  if NBLTYPESi >= 2
             if (nbltypesi >= 2) {
               // read prefix code for block types, HTREE_BTYPE_i
+              read_huffman_code(s, s.block_type_tables[i], nbltypesi + 2);
+              if (s.error != error_code::ok) return s.error;
               // read prefix code for block counts, HTREE_BLEN_i
+              read_huffman_code(s, s.block_count_tables[i], block_len_symbols);
+              if (s.error != error_code::ok) return s.error;
               // read block count, BLEN_i
+              s.block_len[i] = read_block_length(s, i);
               // set block type, BTYPE_i to 0
-              // initialize second-to-last and last block types to 0 and 1
               s.block_type[i] = 0;
-              s.block_len[i] = 16777216;
-              s.error = error_code::syntax_error;
-              return s.error;
+              // initialize second-to-last and last block types to 0 and 1
+              s.penultimate_block_type[i] = 0;
+              s.last_block_type[i] = 1;
+              fprintf(s.log_file, "[BrotliDecoderDecompressStream] s->block_length[s->loop_counter] = %d\n", s.block_len[i]);
             } else {
               // set block type, BTYPE_i to 0
               s.block_type[i] = 0;
@@ -1261,7 +1312,7 @@ namespace andyzip {
           fprintf(s.log_file, "[BrotliDecoderDecompressStream] s->distance_postfix_bits = %d\n", NPOSTFIX);
 
           // read array of literal context modes, CMODE[]
-          for (int i = 0; i != s.num_types[0]; ++i) {
+          for (int i = 0; i != s.num_types[idx_L]; ++i) {
             int ctxt = s.read(2) * 2;
             if (s.error != error_code::ok) return s.error;
             s.context_mode[i & (brotli_decoder_state::max_types-1)] = ctxt;
@@ -1271,33 +1322,40 @@ namespace andyzip {
           // read NTREESL
           int num_literal_htrees = read_256(s);
           if (s.error != error_code::ok) return s.error;
-          read_context_map(s, s.literal_context_map, s.num_types[0] << literal_context_bits, num_literal_htrees);
+          read_context_map(s, s.literal_context_map, s.num_types[idx_L] << literal_context_bits, num_literal_htrees);
           if (s.error != error_code::ok) return s.error;
 
           // read NTREESD
           int num_distance_htrees = read_256(s);
           if (s.error != error_code::ok) return s.error;
-          read_context_map(s, s.distance_context_map, s.num_types[0] << distance_context_bits, num_distance_htrees);
+          read_context_map(s, s.distance_context_map, s.num_types[idx_D] << distance_context_bits, num_distance_htrees);
           if (s.error != error_code::ok) return s.error;
 
           // read array of literal prefix codes, HTREEL[]
           std::vector<andyzip::huffman_table<256>> literal_tables(num_literal_htrees);
           for (int i = 0; i != literal_tables.size(); ++i) {
+            fprintf(s.log_file, "lit %d\n", i);
             read_huffman_code(s, literal_tables[i], 256);
+              fprintf(s.log_file, "err=%d\n", (int)s.error);
+            if (s.error != error_code::ok) return s.error;
           }
 
           // read array of insert-and-copy length prefix codes, HTREEI[]
           std::vector<andyzip::huffman_table<704>> iandc_tables(s.num_types[idx_I]);
           for (int i = 0; i != iandc_tables.size(); ++i) {
             read_huffman_code(s, iandc_tables[i], 704);
+              fprintf(s.log_file, "err=%d\n", (int)s.error);
+            if (s.error != error_code::ok) return s.error;
           }
 
           // read array of distance prefix codes, HTREED[]
           static const int max_distance_alphabet_size = num_distance_short_codes + (15 << 3) + (48 << 3);
           std::vector<andyzip::huffman_table<256>> distance_tables(num_distance_htrees);
-          int distance_alphabet_size = NDIRECT + (48 << NPOSTFIX);
+          int distance_alphabet_size = 16 + NDIRECT + (48 << NPOSTFIX);
           for (int i = 0; i != distance_tables.size(); ++i) {
             read_huffman_code(s, distance_tables[i], distance_alphabet_size);
+              fprintf(s.log_file, "err=%d\n", (int)s.error);
+            if (s.error != error_code::ok) return s.error;
           }
 
           // do
@@ -1307,6 +1365,9 @@ namespace andyzip {
           for (int pos = 0; pos < mlen; ) {
             //  if BLEN_I is zero
             if (s.block_len[idx_I] == 0) {
+              fprintf(s.log_file, "todo\n");
+              s.error = error_code::syntax_error;
+              return s.error;
               // read block type using HTREE_BTYPE_I and set BTYPE_I
                 //  save previous block type
               // read block count using HTREE_BLEN_I and set BLEN_I
@@ -1336,6 +1397,9 @@ namespace andyzip {
             for (int i = 0; i != insert_len && pos < mlen; ++i) {
               // if BLEN_L is zero
               if (s.block_len[idx_L] == 0) {
+                fprintf(s.log_file, "todo\n");
+                s.error = error_code::syntax_error;
+                return s.error;
                 //  read block type using HTREE_BTYPE_L and set BTYPE_L
                   //   save previous block type
                 //  read block count using HTREE_BLEN_L and set BLEN_L
@@ -1389,6 +1453,9 @@ namespace andyzip {
             } else {
               // if BLEN_D is zero
               if (s.block_len[idx_D] == 0) {
+                fprintf(s.log_file, "todo\n");
+                s.error = error_code::syntax_error;
+                return s.error;
                 //  read block type using HTREE_BTYPE_D and set BTYPE_D
                   //   save previous block type
                 //  read block count using HTREE_BLEN_D and set BLEN_D
@@ -1443,7 +1510,9 @@ namespace andyzip {
               }
             } else {
               // todo: dictionary lookups.
-              return s.error = brotli_decoder_state::error_code::syntax_error;
+              fprintf(s.log_file, "todo\n");
+              s.error = error_code::syntax_error;
+              return s.error;
               // look up the static dictionary word, transform the word as
               // directed, and copy the result to the uncompressed stream
             }

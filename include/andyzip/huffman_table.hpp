@@ -41,6 +41,26 @@ namespace andyzip {
     void init(const uint8_t *lengths, const uint16_t *symbols, unsigned num_lengths) {
       invalid_ = true;
 
+      if (num_lengths == 1) {
+        min_length_ = 0;
+        max_length_ = 0;
+        limits_[0] = 0xffff;
+        base_[0] = 0;
+        symbols_[0] = symbols[0];
+        invalid_ = false;
+        return;
+      }
+      if (num_lengths == 2) {
+        min_length_ = 1;
+        max_length_ = 1;
+        limits_[0] = 0xffff;
+        base_[0] = 0;
+        symbols_[0] = symbols[0];
+        symbols_[1] = symbols[1];
+        invalid_ = false;
+        return;
+      }
+
       min_length_ = 16;
       max_length_ = 0;
       for (unsigned i = 0; i != num_lengths; ++i) {
