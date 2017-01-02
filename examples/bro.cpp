@@ -135,7 +135,7 @@ public:
 
     andyzip::brotli_decoder_state state;
 
-    char tmp[65536];
+    static char tmp[0x1000000];
     if (!ifs.bad() && !ifs.eof()) {
       ifs.read(tmp, sizeof(tmp));
       std::cout << ifs.gcount() << "\n";
