@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
   #include <sys/stat.h>
@@ -21,6 +22,7 @@
 class bro {
   struct args_t {
     bool force = false;
+    bool verbose = false;
     bool decompress = false;
     bool no_copy_stat = false;
     const char *input_file = nullptr;
@@ -68,6 +70,9 @@ class bro {
                 } break;
                 case 'd': case 'u': {
                   decompress = true;
+                } break;
+                case 'v': {
+                  verbose = true;
                 } break;
                 case 'N': {
                   if (!sw[1]) { error(arg, "unknown argument", switches); return; }
@@ -137,13 +142,20 @@ public:
 
     static char tmp[0x1000000];
     if (!ifs.bad() && !ifs.eof()) {
+      auto start = std::chrono::high_resolution_clock::now();
       ifs.read(tmp, sizeof(tmp));
-      std::cout << ifs.gcount() << "\n";
       state.src = tmp;
       state.bitptr = 0;
       state.bitptr_max = (std::uint32_t)(ifs.gcount() * 8);
       state.log_file = fopen("log.txt", "wb");
       dec.decode(state);
+      auto end = std::chrono::high_resolution_clock::now();
+      auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+      printf("err=%d\n", (int)state.error);
+      printf("%d\n", (int)state.bytes_written);
+      if (args.verbose) {
+        printf("Brotli decompression speed: %0.f MB/s\n", (1000000000.0/1024/1024) * state.bytes_written / nanoseconds.count());
+      }
     }
   }
 };
