@@ -10,7 +10,29 @@
 #include <cstdint>
 #include <utility>
 
+#if _MSC_VER > 0
+  #define ALWAYS_INLINE __forceinline
+#elif __has_attribute(always_inline)
+  #define ALWAYS_INLINE __attribute__((always_inline))
+#else
+  #define ALWAYS_INLINE
+#endif
+
 namespace andyzip {
+  static inline uint16_t rev16(uint16_t value) {
+    // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
+    static const unsigned char BitReverseTable256[256] = {
+      #define R2(n)     n,     n + 2*64,     n + 1*64,     n + 3*64
+      #define R4(n) R2(n), R2(n + 2*16), R2(n + 1*16), R2(n + 3*16)
+      #define R6(n) R4(n), R4(n + 2*4 ), R4(n + 1*4 ), R4(n + 3*4 )
+      R6(0), R6(2), R6(1), R6(3)
+    };
+    #undef R2
+    #undef R4
+    #undef R6
+    return BitReverseTable256[value&0xff] << 8 | BitReverseTable256[(value>>8)&0xff];
+  }
+
   template<int MaxCodes>
   class huffman_table {
     uint8_t min_length_;
@@ -22,19 +44,6 @@ namespace andyzip {
 
     bool invalid_;
 
-    static uint16_t rev16(uint16_t value) {
-      // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
-      static const unsigned char BitReverseTable256[256] = {
-        #define R2(n)     n,     n + 2*64,     n + 1*64,     n + 3*64
-        #define R4(n) R2(n), R2(n + 2*16), R2(n + 1*16), R2(n + 3*16)
-        #define R6(n) R4(n), R4(n + 2*4 ), R4(n + 1*4 ), R4(n + 3*4 )
-        R6(0), R6(2), R6(1), R6(3)
-      };
-      #undef R2
-      #undef R4
-      #undef R6
-      return BitReverseTable256[value&0xff] << 8 | BitReverseTable256[(value>>8)&0xff];
-    }
   public:
     static const int max_codes = MaxCodes;
 
@@ -98,7 +107,7 @@ namespace andyzip {
 
     bool invalid() const { return invalid_; }
 
-    std::pair<unsigned, unsigned> decode(unsigned peek16) {
+    std::pair<unsigned, unsigned> ALWAYS_INLINE decode(unsigned peek16) {
       unsigned value = rev16(peek16);
       unsigned index = 0;
       while (value > limits_[index]) {
