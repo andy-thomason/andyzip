@@ -314,9 +314,9 @@ namespace andyzip {
       unsigned code = s.peek(16);
       auto length_code = s.block_count_tables[index].decode(code);
       s.drop(length_code.first);
-      int extra_bits = kBlockLengthPrefixCode[length_code.second].nbits;
+      int extra_bits = brotli_data::kBlockLengthPrefixCode[length_code.second].nbits;
       int value = s.read(extra_bits);
-      return kBlockLengthPrefixCode[length_code.second].offset + value;
+      return brotli_data::kBlockLengthPrefixCode[length_code.second].offset + value;
     }
 
     static void read_block_switch_command(brotli_decoder_state &s, int index) {
@@ -397,167 +397,21 @@ namespace andyzip {
     }
 
     int transform_dictionary_word(char *buffer, const uint8_t *src, int transform_idx, int copy_len, int ringbuffer_mask) {
-      // Appendix B.  List of Word Transformations
-      enum transform_t : uint8_t{
-        Identity,
-        FermentFirst,
-        FermentAll,
-        OmitFirst1,
-        OmitFirst2,
-        OmitFirst3,
-        OmitFirst4,
-        OmitFirst5,
-        OmitFirst6,
-        OmitFirst7,
-        OmitFirst8,
-        OmitFirst9,
-        OmitLast1,
-        OmitLast2,
-        OmitLast3,
-        OmitLast4,
-        OmitLast5,
-        OmitLast6,
-        OmitLast7,
-        OmitLast8,
-        OmitLast9,
-      };
-      static const struct {
-        char prefix[6];
-        transform_t id;
-        char suffix[9];
-      } table[] = {
-        "",Identity,"",
-        "",Identity," ",
-        " ",Identity," ",
-        "",OmitFirst1,"",
-        "",FermentFirst," ",
-        "",Identity," the ",
-        " ",Identity,"",
-        "s ",Identity," ",
-        "",Identity," of ",
-        "",FermentFirst,"",
-        "",Identity," and ",
-        "",OmitFirst2,"",
-        "",OmitLast1,"",
-        ", ",Identity," ",
-        "",Identity,", ",
-        " ",FermentFirst," ",
-        "",Identity," in ",
-        "",Identity," to ",
-        "e ",Identity," ",
-        "",Identity,"\"",
-        "",Identity,".",
-        "",Identity,"\">",
-        "",Identity,"\n",
-        "",OmitLast3,"",
-        "",Identity,"]",
-        "",Identity," for ",
-        "",OmitFirst3,"",
-        "",OmitLast2,"",
-        "",Identity," a ",
-        "",Identity," that ",
-        " ",FermentFirst,"",
-        "",Identity,". ",
-        ".",Identity,"",
-        " ",Identity,", ",
-        "",OmitFirst4,"",
-        "",Identity," with ",
-        "",Identity,"'",
-        "",Identity," from ",
-        "",Identity," by ",
-        "",OmitFirst5,"",
-        "",OmitFirst6,"",
-        " the ",Identity,"",
-        "",OmitLast4,"",
-        "",Identity,". The ",
-        "",FermentAll,"",
-        "",Identity," on ",
-        "",Identity," as ",
-        "",Identity," is ",
-        "",OmitLast7,"",
-        "",OmitLast1,"ing ",
-        "",Identity,"\n\t",
-        "",Identity,":",
-        " ",Identity,". ",
-        "",Identity,"ed ",
-        "",OmitFirst9,"",
-        "",OmitFirst7,"",
-        "",OmitLast6,"",
-        "",Identity,"(",
-        "",FermentFirst,", ",
-        "",OmitLast8,"",
-        "",Identity," at ",
-        "",Identity,"ly ",
-        " the ",Identity," of ",
-        "",OmitLast5,"",
-        "",OmitLast9,"",
-        " ",FermentFirst,", ",
-        "",FermentFirst,"\"",
-        ".",Identity,"(",
-        "",FermentAll," ",
-        "",FermentFirst,"\">",
-        "",Identity,"=\"",
-        " ",Identity,".",
-        ".com/",Identity,"",
-        " the ",Identity," of the ",
-        "",FermentFirst,"'",
-        "",Identity,". This ",
-        "",Identity,",",
-        ".",Identity," ",
-        "",FermentFirst,"(",
-        "",FermentFirst,".",
-        "",Identity," not ",
-        " ",Identity,"=\"",
-        "",Identity,"er ",
-        " ",FermentAll," ",
-        "",Identity,"al ",
-        " ",FermentAll,"",
-        "",Identity,"='",
-        "",FermentAll,"\"",
-        "",FermentFirst,". ",
-        " ",Identity,"(",
-        "",Identity,"ful ",
-        " ",FermentFirst,". ",
-        "",Identity,"ive ",
-        "",Identity,"less ",
-        "",FermentAll,"'",
-        "",Identity,"est ",
-        " ",FermentFirst,".",
-        "",FermentAll,"\">",
-        " ",Identity,"='",
-        "",FermentFirst,",",
-        "",Identity,"ize ",
-        "",FermentAll,".",
-        "\xc2\xa0",Identity,"",
-        " ",Identity,",",
-        "",FermentFirst,"=\"",
-        "",FermentAll,"=\"",
-        "",Identity,"ous ",
-        "",FermentAll,", ",
-        "",FermentFirst,"='",
-        " ",FermentFirst,",",
-        " ",FermentAll,"=\"",
-        " ",FermentAll,", ",
-        "",FermentAll,",",
-        "",FermentAll,"(",
-        "",FermentAll,". ",
-      };
-
       char *dest = buffer;
-      auto &t = table[transform_idx];
+      auto &t = brotli_data::table[transform_idx];
       for (const char *psrc = t.prefix; *psrc; ++psrc) {
         *dest++ = *psrc;
       }
 
-      if (t.id >= OmitLast1) {
-        copy_len -= t.id - OmitLast1 + 1;
-      } else if (t.id >= OmitFirst1) {
-        copy_len -= t.id - OmitFirst1 + 1;
-        src += t.id - OmitFirst1 + 1;
+      if (t.id >= brotli_data::OmitLast1) {
+        copy_len -= t.id - brotli_data::OmitLast1 + 1;
+      } else if (t.id >= brotli_data::OmitFirst1) {
+        copy_len -= t.id - brotli_data::OmitFirst1 + 1;
+        src += t.id - brotli_data::OmitFirst1 + 1;
       }
 
       // fermentation (aka. case conversion)
-      if (t.id == FermentFirst || t.id == FermentAll) {
+      if (t.id == brotli_data::FermentFirst || t.id == brotli_data::FermentAll) {
         uint8_t fermented[24];
         if (copy_len <= 24) {
           memcpy(fermented, src, copy_len);
@@ -581,7 +435,7 @@ namespace andyzip {
             }
             i += 3;
           }
-          if (t.id == FermentFirst) break;
+          if (t.id == brotli_data::FermentFirst) break;
         }
         src = fermented;
       }
@@ -781,7 +635,7 @@ namespace andyzip {
             s.drop(iandc.first);
 
             //  compute insert length, ILEN, and copy length, CLEN
-            CmdLutElement cmd = kCmdLut[iandc.second];
+            brotli_data::CmdLutElement cmd = brotli_data::kCmdLut[iandc.second];
             int insert_len =
               cmd.insert_len_offset + 
               (cmd.insert_len_extra_bits ? s.read(cmd.insert_len_extra_bits) : 0)
@@ -815,7 +669,7 @@ namespace andyzip {
               // For Signed:  Context ID = (Lut2[p1] << 3) | Lut2[p2]
               int context_id =
                 cmode < 2 ? (p1 >> cmode*2) & 63 :
-                cmode == 2 ? Lut0[p1] | Lut1[p2] : (Lut2[p1] << 3) | Lut2[p2]
+                cmode == 2 ? brotli_data::Lut0[p1] | brotli_data::Lut1[p2] : (brotli_data::Lut2[p1] << 3) | brotli_data::Lut2[p2]
               ;
               if (debug) fprintf(s.log_file, "[ProcessCommandsInternal] context = %d\n", context_id);
 
@@ -869,7 +723,7 @@ namespace andyzip {
 
               if (dcode < 16) {
                 // compute distance by distance short code substitution
-                uint8_t subst = distance_table[dcode];
+                uint8_t subst = brotli_data::distance_table[dcode];
                 int base = last_distances[(last_distance_idx - (subst >> 4)) & 3];
                 distance = base + (subst & 0x0f) - 4;
               } else if (dcode - NDIRECT - 16 < 0) {
@@ -912,12 +766,12 @@ namespace andyzip {
               }
               // look up the static dictionary word, transform the word as
               // directed, and copy the result to the uncompressed stream
-              int offset = kBrotliDictionaryOffsetsByLength[copy_len];
+              int offset = brotli_data::kBrotliDictionaryOffsetsByLength[copy_len];
               int word_id = distance - pos - 1;
-              uint8_t shift = kBrotliDictionarySizeBitsByLength[copy_len];
+              uint8_t shift = brotli_data::kBrotliDictionarySizeBitsByLength[copy_len];
               int word_idx = word_id & ((1 << shift)-1);
               int transform_idx = word_id >> shift;
-              const uint8_t *src = kBrotliDictionary + offset + word_idx * copy_len;
+              const uint8_t *src = brotli_data::kBrotliDictionary + offset + word_idx * copy_len;
               char buffer[128];
               int len = transform_dictionary_word(buffer, src, transform_idx, copy_len, ringbuffer_mask);
               if (debug) fprintf(s.log_file, "[ProcessCommandsInternal] dictionary word: [%.*s]\n", len, buffer);
