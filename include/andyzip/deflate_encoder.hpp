@@ -11,13 +11,14 @@
 #include <algorithm>
 
 namespace andyzip {
-  template <class AddrType=uint32_t, class Allocator=std::allocator<char>>
+  template <class CharType=uint8_t, class AddrType=uint32_t, class Allocator=std::allocator<char>>
   class suffix_array {
 
   public:
     typedef AddrType addr_type;
+    typedef CharType char_type;
 
-    suffix_array(const uint8_t *src, const uint8_t *src_max) {
+    suffix_array(const char_type *src, const char_type *src_max) {
       size_t size = src_max - src;
 
       struct sorter_t {
@@ -50,7 +51,7 @@ namespace andyzip {
       };
 
       // todo: limit work to parts of the array not yet complete.
-      constexpr bool debug = true;
+      constexpr bool debug = false;
       for (size_t h = 1; ; h *= 2) {
         // sort by group
         std::sort(sorter.begin(), sorter.end(), sort_by_group_and_next);
@@ -110,9 +111,9 @@ namespace andyzip {
       }
     }
 
-    auto &addresses() const { return addresses_; }
-    auto &longest_common_prefix() const { return longest_common_prefix_; }
-    auto &addr_to_sa() const { return addr_to_sa_; }
+    auto addr(size_t i) const { return addresses_[i]; }
+    auto lcp(size_t i) const { return longest_common_prefix_[i]; }
+    auto rank(size_t i) const { return addr_to_sa_[i]; }
   private:
 
     std::vector<addr_type, Allocator> addresses_;
@@ -242,15 +243,23 @@ namespace andyzip {
     }
 
     bool encode(uint8_t *dest, uint8_t *dest_max, const uint8_t *src, const uint8_t *src_max) const {
-      size_t block_size = 0x100000;
+      size_t block_size = 0x10000;
+      FILE *log = fopen("1.txt", "wb");
 
       while (src != src_max) {
         size_t size = std::min((size_t)(src_max - src), block_size);
-        suffix_array<uint32_t> sa(src, src + size);
-
+        suffix_array<uint8_t, uint32_t> sa(src, src + size);
         for (size_t i = 0; i != size; ++i) {
-          
+          size_t addr = sa.addr(i);
+          char buf[12];
+          size_t k = 0;
+          for (size_t j = std::max(1u, addr)-1; k != 10 && j != size; ++j) {
+            buf[k++] = src[j] < ' ' || src[j] >= 0x7f  ? '.' : src[j];
+          }
+          buf[k] = 0;
+          fprintf(log, "%8d <%s>\n", i, buf);
         }
+        break;
         src += size;
       }
       return false;
