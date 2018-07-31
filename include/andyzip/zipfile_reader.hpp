@@ -70,7 +70,7 @@ public:
     // file comment (variable size)
 
     std::vector<std::string> names;
-    for (const uint8_t *p = central_dir_begin_; p < central_dir_end_; ++p) {
+    for (const uint8_t *p = central_dir_begin_; p < central_dir_end_; ) {
       if (u4(p) != 0x02014b50) {
         throw std::runtime_error("bad directory entry");
       }
@@ -110,7 +110,7 @@ public:
     // file comment (variable size)
 
     std::vector<const uint8_t *> result;
-    for (const uint8_t *p = central_dir_begin_; p < central_dir_end_; ++p) {
+    for (const uint8_t *p = central_dir_begin_; p < central_dir_end_; ) {
       if (u4(p) != 0x02014b50) {
         throw std::runtime_error("bad directory entry");
       }
@@ -181,7 +181,7 @@ public:
   const uint8_t *get_dir_entry(const std::string &filename) const {
     uint8_t c0 = filename[0];
     uint16_t len = (uint16_t)filename.size();
-    for (const uint8_t *p = central_dir_begin_; p < central_dir_end_; ++p) {
+    for (const uint8_t *p = central_dir_begin_; p < central_dir_end_; ) {
       if (u2(p + 28) == len) {
         if (!memcmp(filename.data(), p + 46, u2(p + 28))) {
           return begin_ + u4(p + 42);
