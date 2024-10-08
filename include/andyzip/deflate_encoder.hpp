@@ -11,8 +11,8 @@
 #include <algorithm>
 
 namespace andyzip {
-  template <class CharType=uint8_t, class AddrType=uint32_t, class Allocator=std::allocator<char>>
-  class suffix_array {
+    template <class CharType = uint8_t, class AddrType = uint32_t, template<typename> typename Allocator = std::allocator>
+    class suffix_array {
 
   public:
     typedef AddrType addr_type;
@@ -27,7 +27,7 @@ namespace andyzip {
         addr_type addr;
       };
 
-      std::vector<sorter_t, Allocator> sorter(size + 1);
+      std::vector<sorter_t, Allocator<sorter_t>> sorter(size + 1);
       addr_to_sa_.resize(size + 1);
 
       for (size_t i = 0; i != size+1; ++i) {
@@ -116,9 +116,9 @@ namespace andyzip {
     auto rank(size_t i) const { return addr_to_sa_[i]; }
   private:
 
-    std::vector<addr_type, Allocator> addresses_;
-    std::vector<addr_type, Allocator> longest_common_prefix_;
-    std::vector<addr_type, Allocator> addr_to_sa_;
+    std::vector<addr_type, Allocator<addr_type>> addresses_;
+    std::vector<addr_type, Allocator<addr_type>> longest_common_prefix_;
+    std::vector<addr_type, Allocator<addr_type>> addr_to_sa_;
   };
 
   class old_suffix_array {
@@ -253,7 +253,7 @@ namespace andyzip {
           size_t addr = sa.addr(i);
           char buf[12];
           size_t k = 0;
-          for (size_t j = std::max(1u, addr)-1; k != 10 && j != size; ++j) {
+          for (size_t j = std::max((size_t)1u, addr)-1; k != 10 && j != size; ++j) {
             buf[k++] = src[j] < ' ' || src[j] >= 0x7f  ? '.' : src[j];
           }
           buf[k] = 0;
